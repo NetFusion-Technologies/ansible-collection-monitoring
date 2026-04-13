@@ -114,3 +114,7 @@ scrape_configs:
       - source_labels: [instance_name]
         target_label: instance
 {% endif %}
+
+{% if monitoring_prometheus_extra_scrape_configs | length > 0 %}
+{{ monitoring_prometheus_extra_scrape_configs | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}

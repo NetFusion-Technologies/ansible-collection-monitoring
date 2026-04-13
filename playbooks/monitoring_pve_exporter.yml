@@ -1,1 +1,11 @@
-../../../../../playbooks/monitoring_pve_exporter.yml
+---
+- name: Example Prometheus PVE exporter deployment
+  hosts: proxmox_nodes
+  become: true
+  gather_facts: true
+
+  collections:
+    - netfusion.monitoring
+
+  roles:
+    - prometheus_pve_exporter

@@ -1,1 +1,11 @@
-../../../../../playbooks/monitoring_alertmanager.yml
+---
+- name: Example Alertmanager deployment
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  collections:
+    - netfusion.monitoring
+
+  roles:
+    - alertmanager

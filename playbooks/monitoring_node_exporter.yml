@@ -1,1 +1,11 @@
-../../../../../playbooks/monitoring_node_exporter.yml
+---
+- name: Example node_exporter deployment
+  hosts: managed_linux
+  become: true
+  gather_facts: true
+
+  collections:
+    - netfusion.monitoring
+
+  roles:
+    - node_exporter

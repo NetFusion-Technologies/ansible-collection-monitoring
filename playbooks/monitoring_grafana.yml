@@ -1,1 +1,11 @@
-../../../../../playbooks/monitoring_grafana.yml
+---
+- name: Example Grafana deployment
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  collections:
+    - netfusion.monitoring
+
+  roles:
+    - grafana

@@ -1,0 +1,60 @@
+---
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+  become: true
+  when: alloy_manage_repo | bool
+
+- name: Remove legacy Grafana apt source files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/grafana.list
+    - /etc/apt/sources.list.d/grafana.sources
+    - /etc/apt/sources.list.d/grafana.repo
+  become: true
+  when: alloy_manage_repo | bool
+
+- name: Remove conflicting legacy Grafana key files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /usr/share/keyrings/grafana.key
+    - /etc/apt/keyrings/grafana.gpg
+  become: true
+  when: alloy_manage_repo | bool
+
+- name: Install Grafana repository signing key
+  ansible.builtin.get_url:
+    url: https://apt.grafana.com/gpg-full.key
+    dest: /etc/apt/keyrings/grafana.asc
+    mode: "0644"
+    force: false
+  become: true
+  when: alloy_manage_repo | bool
+
+- name: Configure Grafana apt repository in deb822 format
+  ansible.builtin.template:
+    src: grafana.sources.j2
+    dest: /etc/apt/sources.list.d/grafana.sources
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  when: alloy_manage_repo | bool
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+  become: true
+  when: alloy_manage_repo | bool
+
+- name: Ensure Alloy package is installed on Debian
+  ansible.builtin.apt:
+    name: "{{ alloy_package_name }}"
+    state: present
+  become: true

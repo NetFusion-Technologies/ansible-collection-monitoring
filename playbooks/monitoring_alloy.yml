@@ -1,0 +1,17 @@
+---
+- name: Deploy Alloy to Linux agents
+  hosts: "{{ alloy_target_linux | default('managed_linux') }}"
+  become: true
+  roles:
+    - netfusion.monitoring.alloy
+
+- name: Deploy Alloy to macOS agents
+  hosts: "{{ alloy_target_macos | default('managed_macos') }}"
+  become: false
+  roles:
+    - netfusion.monitoring.alloy
+
+- name: Deploy Alloy to Windows agents
+  hosts: "{{ alloy_target_windows | default('managed_windows') }}"
+  roles:
+    - netfusion.monitoring.alloy

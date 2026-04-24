@@ -1,9 +1,9 @@
 apiVersion: 1
 
 datasources:
-  - name: {{ grafana_prometheus_datasource_name }}
+  - name: Prometheus
     type: prometheus
     access: proxy
-    url: {{ grafana_prometheus_url }}
+    url: http://{{ monitoring_prometheus_fqdn }}:9090
     isDefault: true
-    editable: false
+    editable: true

@@ -1,0 +1,80 @@
+---
+- name: Check for Xcode Command Line Tools
+  ansible.builtin.command: xcode-select -p
+  register: alloy_xcode_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if Xcode Command Line Tools are missing
+  ansible.builtin.fail:
+    msg: >-
+      Xcode Command Line Tools are required before installing Homebrew on macOS.
+      Install them manually with: xcode-select --install
+  when: alloy_xcode_check.rc != 0
+
+- name: Check if Homebrew exists at Apple Silicon path
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/brew
+  register: alloy_brew_opt
+
+- name: Check if Homebrew exists at Intel path
+  ansible.builtin.stat:
+    path: /usr/local/bin/brew
+  register: alloy_brew_usr
+
+- name: Set Homebrew path for macOS
+  ansible.builtin.set_fact:
+    alloy_brew_path: >-
+      {{
+        '/opt/homebrew/bin/brew' if alloy_brew_opt.stat.exists
+        else '/usr/local/bin/brew' if alloy_brew_usr.stat.exists
+        else ''
+      }}
+
+- name: Install Homebrew if missing
+  ansible.builtin.shell: |
+    NONINTERACTIVE=1 /bin/bash -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  when: alloy_brew_path | length == 0
+  become: false
+
+- name: Re-check Homebrew at Apple Silicon path after install
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/brew
+  register: alloy_brew_opt_after
+
+- name: Re-check Homebrew at Intel path after install
+  ansible.builtin.stat:
+    path: /usr/local/bin/brew
+  register: alloy_brew_usr_after
+
+- name: Set Homebrew path after install
+  ansible.builtin.set_fact:
+    alloy_brew_path: >-
+      {{
+        '/opt/homebrew/bin/brew' if alloy_brew_opt_after.stat.exists
+        else '/usr/local/bin/brew' if alloy_brew_usr_after.stat.exists
+        else ''
+      }}
+
+- name: Fail if Homebrew is still not present after install
+  ansible.builtin.fail:
+    msg: "Homebrew was not found after installation attempt."
+  when: alloy_brew_path | length == 0
+
+- name: Install Alloy via Homebrew
+  ansible.builtin.shell: |
+    eval "$({{ alloy_brew_path }} shellenv)"
+    {{ alloy_brew_path }} tap grafana/grafana
+    {{ alloy_brew_path }} install grafana/grafana/alloy
+  become: false
+  when: not (alloy_upgrade | bool)
+
+- name: Upgrade Alloy via Homebrew
+  ansible.builtin.shell: |
+    eval "$({{ alloy_brew_path }} shellenv)"
+    {{ alloy_brew_path }} tap grafana/grafana
+    {{ alloy_brew_path }} upgrade grafana/grafana/alloy
+  become: false
+  when: alloy_upgrade | bool
+

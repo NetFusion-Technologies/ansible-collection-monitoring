@@ -1,0 +1,7 @@
+---
+- name: Deploy Loki
+  hosts: svc-loki
+  become: true
+  roles:
+    - netfusion.monitoring.loki
+

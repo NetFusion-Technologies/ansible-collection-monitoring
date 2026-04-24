@@ -1,0 +1,61 @@
+---
+- name: Ensure Loki package is installed
+  ansible.builtin.apt:
+    name: "{{ loki_package_name }}"
+    state: present
+    update_cache: true
+  become: true
+
+- name: Ensure Loki group exists
+  ansible.builtin.group:
+    name: "{{ loki_group }}"
+    system: true
+    state: present
+  become: true
+
+- name: Ensure Loki user exists and uses Loki group
+  ansible.builtin.user:
+    name: "{{ loki_user }}"
+    group: "{{ loki_group }}"
+    system: true
+    create_home: false
+    home: /nonexistent
+    shell: /usr/sbin/nologin
+    state: present
+  become: true
+
+- name: Ensure Loki directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ loki_user }}"
+    group: "{{ loki_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ loki_config_dir }}", mode: "0755" }
+    - { path: "{{ loki_data_dir }}", mode: "0755" }
+    - { path: "{{ loki_rules_dir }}", mode: "0755" }
+    - { path: "{{ loki_wal_dir }}", mode: "0750" }
+    - { path: "{{ loki_index_dir }}", mode: "0755" }
+    - { path: "{{ loki_cache_dir }}", mode: "0755" }
+    - { path: "{{ loki_chunks_dir }}", mode: "0755" }
+    - { path: "{{ loki_compactor_dir }}", mode: "0755" }
+  become: true
+
+- name: Deploy Loki configuration
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ loki_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart loki
+  become: true
+
+- name: Ensure Loki service is enabled and started
+  ansible.builtin.systemd:
+    name: loki
+    enabled: true
+    state: started
+  become: true
+

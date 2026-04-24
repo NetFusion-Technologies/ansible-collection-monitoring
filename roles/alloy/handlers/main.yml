@@ -1,0 +1,21 @@
+---
+- name: restart alloy
+  ansible.builtin.systemd:
+    name: "{{ alloy_service_name }}"
+    state: restarted
+    daemon_reload: true
+  become: true
+  when: alloy_platform_key in ["Debian", "Archlinux"]
+
+- name: restart alloy
+  ansible.windows.win_service:
+    name: "{{ alloy_service_name }}"
+    state: restarted
+  when: alloy_platform_key == "Windows"
+
+- name: restart alloy
+  ansible.builtin.shell: |
+    eval "$({{ alloy_brew_path }} shellenv)"
+    {{ alloy_brew_path }} services restart grafana/grafana/alloy
+  become: false
+  when: alloy_platform_key == "Darwin"

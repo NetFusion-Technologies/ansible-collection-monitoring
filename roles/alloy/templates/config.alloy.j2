@@ -1,0 +1,47 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+loki.write "default" {
+  endpoint {
+    url = "{{ alloy_loki_url | mandatory }}"
+  }
+}
+
+{% if alloy_scrape_journal and ansible_system != "Windows" %}
+loki.source.journal "systemd" {
+  max_age = "{{ alloy_journal_max_age }}"
+
+  labels = {
+    job          = "{{ alloy_journal_job }}",
+    source       = "{{ alloy_journal_source }}",
+    host         = "{{ inventory_hostname }}",
+    env          = "{{ alloy_env }}",
+    service_name = "{{ alloy_journal_service_name }}",
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+{% endif %}
+
+{% for src in alloy_file_sources %}
+loki.source.file "{{ src.name }}" {
+  targets = [
+    {
+      __path__     = "{{ src.path }}",
+      job          = "{{ src.job }}",
+      source       = "{{ src.source | default('file') }}",
+      host         = "{{ inventory_hostname }}",
+      env          = "{{ alloy_env }}",
+      service_name = "{{ src.service_name | default(src.job) }}",
+    },
+  ]
+
+  file_match {
+    enabled = true
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+{% endfor %}

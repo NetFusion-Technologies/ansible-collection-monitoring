@@ -1,0 +1,31 @@
+---
+loki_package_name: loki
+loki_user: loki
+loki_group: loki
+
+loki_config_dir: /etc/loki
+loki_config_file: /etc/loki/config.yml
+
+loki_data_dir: /var/lib/loki
+loki_rules_dir: /var/lib/loki/rules
+loki_wal_dir: /var/lib/loki/wal
+loki_index_dir: /var/lib/loki/index
+loki_cache_dir: /var/lib/loki/boltdb-cache
+loki_chunks_dir: /var/lib/loki/chunks
+loki_compactor_dir: /var/lib/loki/compactor
+
+loki_http_listen_port: 3100
+loki_http_listen_address: 0.0.0.0
+
+loki_retention_period: 168h
+loki_auth_enabled: false
+
+loki_schema_from: "2024-01-01"
+loki_schema_store: tsdb
+loki_schema_object_store: filesystem
+loki_schema_version: v13
+loki_replication_factor: 1
+
+loki_query_range_results_cache_enabled: true
+loki_log_level: info
+

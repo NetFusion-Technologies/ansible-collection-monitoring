@@ -1,0 +1,53 @@
+---
+- name: Fail if platform is unsupported
+  ansible.builtin.fail:
+    msg: "Unsupported platform for Alloy: {{ ansible_os_family }} / {{ ansible_system }}"
+  when: alloy_platform_key not in alloy_supported_platforms
+
+- name: Assert alloy_loki_url is defined
+  ansible.builtin.assert:
+    that:
+      - alloy_loki_url is defined
+      - alloy_loki_url | length > 0
+    fail_msg: "alloy_loki_url must be defined for this host before deploying Alloy."
+
+- name: Install Alloy on Debian
+  ansible.builtin.include_tasks: install_debian.yml
+  when: alloy_platform_key == "Debian"
+
+- name: Install Alloy on Archlinux
+  ansible.builtin.include_tasks: install_archlinux.yml
+  when: alloy_platform_key == "Archlinux"
+
+- name: Install Alloy on Windows
+  ansible.builtin.include_tasks: install_windows.yml
+  when: alloy_platform_key == "Windows"
+
+- name: Install Alloy on macOS
+  ansible.builtin.include_tasks: install_macos.yml
+  when: alloy_platform_key == "Darwin"
+
+- name: Configure Alloy on Debian
+  ansible.builtin.include_tasks: configure_linux.yml
+  when: alloy_platform_key == "Debian"
+
+- name: Configure Alloy on Archlinux
+  ansible.builtin.include_tasks: configure_linux.yml
+  when: alloy_platform_key == "Archlinux"
+
+- name: Configure Alloy on Windows
+  ansible.builtin.include_tasks: configure_windows.yml
+  when: alloy_platform_key == "Windows"
+
+- name: Configure Alloy on macOS
+  ansible.builtin.include_tasks: configure_macos.yml
+  when: alloy_platform_key == "Darwin"
+
+- name: Fail on unsupported platforms
+  ansible.builtin.fail:
+    msg: >-
+      Unsupported Alloy platform:
+      ansible_os_family={{ ansible_os_family }},
+      ansible_system={{ ansible_system }},
+      alloy_platform_key={{ alloy_platform_key }}
+  when: alloy_platform_key not in ["Debian", "Archlinux", "Windows", "Darwin"]

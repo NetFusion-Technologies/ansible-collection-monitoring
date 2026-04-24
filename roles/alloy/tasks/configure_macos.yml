@@ -1,0 +1,29 @@
+---
+- name: Ensure Alloy config directory exists on macOS
+  ansible.builtin.file:
+    path: "{{ alloy_config_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Ensure Alloy data directory exists on macOS
+  ansible.builtin.file:
+    path: "{{ alloy_storage_path }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Deploy Alloy configuration on macOS
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: "{{ alloy_config_file }}"
+    mode: "0644"
+  notify: restart alloy
+  become: true
+
+- name: Ensure Alloy service is started on macOS
+  ansible.builtin.shell: |
+    eval "$({{ alloy_brew_path }} shellenv)"
+    {{ alloy_brew_path }} services restart grafana/grafana/alloy
+  become: false
+  when: alloy_manage_service | bool

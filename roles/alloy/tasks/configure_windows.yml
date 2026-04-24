@@ -1,0 +1,37 @@
+---
+- name: Deploy Alloy configuration on Windows
+  ansible.windows.win_template:
+    src: config.alloy.j2
+    dest: "{{ alloy_config_file }}"
+  notify: restart alloy
+
+- name: Create or update Alloy Windows service
+  ansible.windows.win_powershell:
+    script: |
+      $svcName = "{{ alloy_service_name }}"
+      $exe = "{{ alloy_windows_exe }}"
+      $data = "{{ alloy_storage_path }}"
+      $config = "{{ alloy_config_file }}"
+
+      $binPath = "`"$exe`" run --storage.path=`"$data`" `"$config`""
+
+      $existing = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+
+      if (-not $existing) {
+        New-Service -Name $svcName -BinaryPathName $binPath -DisplayName "Grafana Alloy" -StartupType Automatic
+        Write-Output "created"
+      } else {
+        sc.exe config $svcName binPath= $binPath start= auto | Out-Null
+        Write-Output "updated"
+      }
+  register: alloy_windows_service
+  changed_when: >
+    alloy_windows_service.output is defined and
+    (('created' in alloy_windows_service.output) or ('updated' in alloy_windows_service.output))
+
+- name: Ensure Alloy service is started on Windows
+  ansible.windows.win_service:
+    name: "{{ alloy_service_name }}"
+    start_mode: auto
+    state: started
+  when: alloy_manage_service | bool

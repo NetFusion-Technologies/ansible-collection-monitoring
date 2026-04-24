@@ -1,0 +1,90 @@
+---
+alloy_env: production
+alloy_manage_repo: true
+alloy_manage_service: true
+alloy_manage_config: true
+alloy_upgrade: false
+
+# Shared runtime behavior
+alloy_scrape_journal: true
+alloy_journal_max_age: 24h
+alloy_journal_job: journal
+alloy_journal_source: systemd
+alloy_journal_service_name: systemd-journal
+
+# OS-specific file sources should be supplied from group_vars where needed
+alloy_file_sources: []
+
+# Shared Loki destination
+alloy_loki_url: ""
+
+# Supported platforms for this role
+alloy_supported_platforms:
+  - Debian
+  - Archlinux
+  - Darwin
+  - Windows
+
+# Platform-specific package names
+alloy_package_names:
+  Debian: alloy
+  Archlinux: grafana-alloy
+  Darwin: alloy
+  Windows: Grafana.Alloy
+
+# Platform-specific paths, service names, and runtime identity
+alloy_paths:
+  Debian:
+    config_dir: /etc/alloy
+    config_file: /etc/alloy/config.alloy
+    data_dir: /var/lib/alloy
+    service_name: alloy
+    user: alloy
+    group: alloy
+
+  Archlinux:
+    config_dir: /etc/grafana-alloy
+    config_file: /etc/grafana-alloy/config.alloy
+    data_dir: /var/lib/grafana-alloy/data
+    service_name: grafana-alloy
+    user: grafana-alloy
+    group: grafana-alloy
+
+  Darwin:
+    config_dir: /usr/local/etc/alloy
+    config_file: /usr/local/etc/alloy/config.alloy
+    data_dir: /usr/local/var/lib/alloy
+    service_name: alloy
+    user: "{{ ansible_user | default('root') }}"
+    group: staff
+
+  Windows:
+    config_dir: 'C:\ProgramData\Alloy'
+    config_file: 'C:\ProgramData\Alloy\config.alloy'
+    data_dir: 'C:\ProgramData\Alloy\data'
+    service_name: Alloy
+    user: SYSTEM
+    group: Administrators
+
+# Resolve the platform key explicitly.
+# - Linux distros key off ansible_os_family
+# - macOS keys off ansible_system == Darwin
+# - anything else becomes UNSUPPORTED and should fail in tasks/main.yml
+alloy_platform_key: >-
+  {{
+    ansible_os_family
+    if ansible_os_family in ['Debian', 'Archlinux', 'Windows']
+    else 'Darwin'
+    if ansible_system == 'Darwin'
+    else 'UNSUPPORTED'
+  }}
+
+# Resolved values; normally do not override directly
+alloy_package_name: "{{ alloy_package_names[alloy_platform_key] }}"
+alloy_config_dir: "{{ alloy_paths[alloy_platform_key].config_dir }}"
+alloy_config_file: "{{ alloy_paths[alloy_platform_key].config_file }}"
+alloy_storage_path: "{{ alloy_paths[alloy_platform_key].data_dir }}"
+alloy_service_name: "{{ alloy_paths[alloy_platform_key].service_name }}"
+alloy_user: "{{ alloy_paths[alloy_platform_key].user }}"
+alloy_group: "{{ alloy_paths[alloy_platform_key].group }}"
+

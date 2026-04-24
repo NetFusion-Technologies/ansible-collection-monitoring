@@ -1,0 +1,76 @@
+---
+- name: Ensure Alloy group exists on Linux
+  ansible.builtin.group:
+    name: "{{ alloy_group }}"
+    system: true
+    state: present
+  become: true
+
+- name: Ensure Alloy user exists on Linux
+  ansible.builtin.user:
+    name: "{{ alloy_user }}"
+    group: "{{ alloy_group }}"
+    system: true
+    create_home: false
+    home: "{{ alloy_storage_path }}"
+    shell: /bin/false
+    state: present
+  become: true
+
+- name: Ensure Alloy directories exist on Linux
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ alloy_user }}"
+    group: "{{ alloy_group }}"
+    mode: "0755"
+  loop:
+    - "{{ alloy_config_dir }}"
+    - "{{ alloy_storage_path }}"
+  become: true
+
+- name: Ensure Alloy parent data directory exists
+  ansible.builtin.file:
+    path: "{{ alloy_storage_path | dirname }}"
+    state: directory
+    owner: "{{ alloy_user }}"
+    group: "{{ alloy_group }}"
+    mode: "0755"
+  become: true
+
+- name: Ensure Alloy data directory exists
+  ansible.builtin.file:
+    path: "{{ alloy_storage_path }}"
+    state: directory
+    owner: "{{ alloy_user }}"
+    group: "{{ alloy_group }}"
+    mode: "0755"
+  become: true
+
+- name: Ensure Alloy user can read journal
+  ansible.builtin.user:
+    name: "{{ alloy_user }}"
+    groups:
+      - systemd-journal
+      - adm
+    append: true
+  become: true
+  when: alloy_scrape_journal | bool
+
+- name: Deploy Alloy configuration on Linux
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: "{{ alloy_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart alloy
+  become: true
+
+- name: Ensure Alloy service is enabled and started on Linux
+  ansible.builtin.systemd:
+    name: "{{ alloy_service_name }}"
+    enabled: true
+    state: started
+  become: true
+  when: alloy_manage_service | bool

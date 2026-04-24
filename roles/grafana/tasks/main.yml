@@ -25,13 +25,16 @@
     group: grafana
     mode: "0755"
 
-- name: Ensure dashboard provisioning directory exists
-  ansible.builtin.file:
-    path: "{{ grafana_provisioning_dir }}/dashboards"
-    state: directory
-    owner: root
-    group: grafana
-    mode: "0755"
+- name: Validate Grafana database configuration
+  ansible.builtin.assert:
+    that:
+      - grafana_database_type in ["sqlite3", "postgres", "mysql"]
+      - grafana_database_type == "sqlite3" or grafana_database_host | length > 0
+      - grafana_database_type == "sqlite3" or grafana_database_name | length > 0
+      - grafana_database_type == "sqlite3" or grafana_database_user | length > 0
+      - grafana_database_type == "sqlite3" or grafana_database_password | length > 0
+    fail_msg: "Grafana external database configuration is incomplete."
+  no_log: true
 
 - name: Deploy Grafana config
   ansible.builtin.template:
@@ -40,6 +43,7 @@
     owner: root
     group: grafana
     mode: "0640"
+  no_log: true
   notify: restart grafana
 
 - name: Deploy Prometheus datasource provisioning
@@ -50,6 +54,16 @@
     group: grafana
     mode: "0644"
   notify: restart grafana
+
+- name: Deploy Loki datasource provisioning
+  ansible.builtin.template:
+    src: datasource_loki.yml.j2
+    dest: /etc/grafana/provisioning/datasources/loki.yml
+    owner: root
+    group: grafana
+    mode: "0640"
+  notify: restart grafana
+  become: true
 
 - name: Deploy dashboard provider provisioning
   ansible.builtin.copy:
@@ -93,3 +107,12 @@
     mode: "0644"
   notify: restart grafana
 
+- name: Wait for Grafana API
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:3000/api/health"
+    method: GET
+    status_code: 200
+  register: grafana_health
+  retries: 12
+  delay: 5
+  until: grafana_health.status == 200

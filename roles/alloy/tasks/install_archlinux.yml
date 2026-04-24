@@ -1,0 +1,18 @@
+---
+- name: Check whether Alloy package exists in pacman repos
+  ansible.builtin.command: pacman -Si {{ alloy_package_name }}
+  register: alloy_arch_pkg_check
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Fail if Alloy package is not available in configured pacman repos
+  ansible.builtin.fail:
+    msg: "Package '{{ alloy_package_name }}' is not available in the configured pacman repositories on this host."
+  when: alloy_arch_pkg_check.rc != 0
+
+- name: Ensure Alloy package is installed on Archlinux
+  ansible.builtin.command: pacman -S --noconfirm --needed {{ alloy_package_name }}
+  register: alloy_arch_install
+  changed_when: "'there is nothing to do' not in alloy_arch_install.stdout"
+  become: true

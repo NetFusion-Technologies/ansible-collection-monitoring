@@ -1,15 +1,37 @@
 [server]
 http_addr = {{ grafana_http_addr }}
 http_port = {{ grafana_http_port }}
-domain = {{ monitoring_domain }}
+domain = {{ grafana_domain }}
+root_url = {{ grafana_root_url }}
 
 [security]
-admin_user = admin
+admin_user = {{ grafana_admin_user }}
 admin_password = {{ grafana_admin_password }}
 
 [database]
 type = {{ grafana_database_type }}
+{% if grafana_database_type != "sqlite3" %}
 host = {{ grafana_database_host }}
 name = {{ grafana_database_name }}
 user = {{ grafana_database_user }}
 password = {{ grafana_database_password }}
+ssl_mode = {{ grafana_database_ssl_mode }}
+{% endif %}
+
+[users]
+allow_sign_up = {{ grafana_users_allow_sign_up | lower }}
+auto_assign_org = {{ grafana_users_auto_assign_org | lower }}
+auto_assign_org_role = {{ grafana_users_auto_assign_org_role }}
+
+[smtp]
+enabled = {{ grafana_smtp_enabled | lower }}
+host = {{ grafana_smtp_host }}:{{ grafana_smtp_port }}
+user = {{ grafana_smtp_user }}
+password = {{ grafana_smtp_password }}
+from_address = {{ grafana_smtp_from_address }}
+from_name = {{ grafana_smtp_from_name }}
+startTLS_policy = {{ grafana_smtp_starttls_policy }}
+skip_verify = {{ grafana_smtp_skip_verify | lower }}
+
+[emails]
+welcome_email_on_sign_up = {{ grafana_welcome_email_on_sign_up | lower }}

@@ -1,9 +1,47 @@
+# Grafana server
+grafana_http_addr: "0.0.0.0"
+grafana_http_port: 3000
+grafana_domain: "svc-grafana.netfusiontechnologies.net"
+grafana_root_url: "https://{{ grafana_domain }}/"
+
+# Grafana security
+grafana_admin_user: admin
+grafana_admin_password: ""
+
+# Grafana database
+grafana_database_type: sqlite3
+grafana_database_host: ""
+grafana_database_name: grafana
+grafana_database_user: grafana
+grafana_database_password: ""
+
+# Grafana SMTP
+grafana_smtp_enabled: true
+grafana_smtp_host: mail.netfusiontechnologies.com
+grafana_smtp_port: 587
+grafana_smtp_user: grafana@netfusiontechnologies.com
+grafana_smtp_password: ""
+grafana_smtp_from_address: grafana@netfusiontechnologies.com
+grafana_smtp_from_name: "NetFusion Grafana"
+grafana_smtp_starttls_policy: MandatoryStartTLS
+grafana_smtp_skip_verify: false
+
+# Grafana users / org defaults
+grafana_welcome_email_on_sign_up: true
+grafana_users_allow_sign_up: false
+grafana_users_auto_assign_org: true
+grafana_users_auto_assign_org_role: Viewer
+
+# Grafana host file locations
 grafana_config_dir: /etc/grafana
 grafana_provisioning_dir: /etc/grafana/provisioning
 grafana_dashboards_dir: /var/lib/grafana/dashboards
 
-grafana_http_addr: 0.0.0.0
-grafana_http_port: 3000
-
+#Grafana data sources
+# Grafana data sources
 grafana_prometheus_datasource_name: Prometheus
-grafana_prometheus_url: "http://{{ hostvars[monitoring_prometheus_host].ansible_host | default(monitoring_prometheus_host) }}:9090"
+grafana_prometheus_url: "http://{{ monitoring_prometheus_fqdn }}:9090"
+
+grafana_loki_datasource_name: Loki
+grafana_loki_url: "http://{{ monitoring_loki_fqdn }}:{{ loki_http_listen_port | default(3100) }}"
+

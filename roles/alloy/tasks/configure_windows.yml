@@ -5,29 +5,46 @@
     dest: "{{ alloy_config_file }}"
   notify: restart alloy
 
-- name: Create or update Alloy Windows service
+- name: Force Alloy Windows permissions
+  ansible.windows.win_powershell:
+    script: |
+      takeown /F "C:\ProgramData\Alloy" /R /D Y | Out-Null
+      icacls "C:\ProgramData\Alloy" /grant "SYSTEM:(OI)(CI)F" /T | Out-Null
+      icacls "C:\ProgramData\Alloy" /grant "Administrators:(OI)(CI)F" /T | Out-Null
+      icacls "C:\ProgramData\Alloy" /grant "Users:(OI)(CI)RX" /T | Out-Null
+
+- name: Remove existing Alloy service if not managed by NSSM
   ansible.windows.win_powershell:
     script: |
       $svcName = "{{ alloy_service_name }}"
-      $exe = "{{ alloy_windows_exe }}"
-      $data = "{{ alloy_storage_path }}"
-      $config = "{{ alloy_config_file }}"
-
-      $binPath = "`"$exe`" run --storage.path=`"$data`" `"$config`""
-
       $existing = Get-Service -Name $svcName -ErrorAction SilentlyContinue
-
-      if (-not $existing) {
-        New-Service -Name $svcName -BinaryPathName $binPath -DisplayName "Grafana Alloy" -StartupType Automatic
-        Write-Output "created"
-      } else {
-        sc.exe config $svcName binPath= $binPath start= auto | Out-Null
-        Write-Output "updated"
+      if ($existing) {
+        Stop-Service $svcName -ErrorAction SilentlyContinue
+        sc.exe delete $svcName | Out-Null
+        Start-Sleep -Seconds 2
+        Write-Output "removed"
       }
-  register: alloy_windows_service
-  changed_when: >
-    alloy_windows_service.output is defined and
-    (('created' in alloy_windows_service.output) or ('updated' in alloy_windows_service.output))
+  register: alloy_windows_service_removed
+  changed_when: "'removed' in alloy_windows_service_removed.output"
+
+- name: Create Alloy service with NSSM
+  ansible.windows.win_powershell:
+    script: |
+      $nssm = "{{ alloy_windows_nssm_exe }}"
+      $svcName = "{{ alloy_service_name }}"
+      $exe = "{{ alloy_windows_exe }}"
+      $config = "{{ alloy_config_file }}"
+      $data = "{{ alloy_storage_path }}"
+
+      & $nssm install $svcName $exe run $config "--storage.path=$data"
+      & $nssm set $svcName DisplayName "Grafana Alloy"
+      & $nssm set $svcName AppDirectory (Split-Path $exe)
+      & $nssm set $svcName Start SERVICE_AUTO_START
+      & $nssm set $svcName AppStdout "C:\ProgramData\Alloy\alloy-service.out.log"
+      & $nssm set $svcName AppStderr "C:\ProgramData\Alloy\alloy-service.err.log"
+      Write-Output "created"
+  register: alloy_windows_nssm_service
+  changed_when: "'created' in alloy_windows_nssm_service.output"
 
 - name: Ensure Alloy service is started on Windows
   ansible.windows.win_service:

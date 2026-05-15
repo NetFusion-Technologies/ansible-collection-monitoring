@@ -1,7 +1,7 @@
 ---
 - name: Fail if platform is unsupported
   ansible.builtin.fail:
-    msg: "Unsupported platform for Alloy: {{ ansible_os_family }} / {{ ansible_system }}"
+    msg: 'Unsupported platform for Alloy: {{ ansible_facts["os_family"] }} / {{ ansible_facts["system"] }}'
   when: alloy_platform_key not in alloy_supported_platforms
 
 - name: Assert alloy_loki_url is defined
@@ -47,7 +47,7 @@
   ansible.builtin.fail:
     msg: >-
       Unsupported Alloy platform:
-      ansible_os_family={{ ansible_os_family }},
-      ansible_system={{ ansible_system }},
+      ansible_facts["os_family"]={{ ansible_facts["os_family"] }},
+      system={{ ansible_facts["system"] }},
       alloy_platform_key={{ alloy_platform_key }}
   when: alloy_platform_key not in ["Debian", "Archlinux", "Windows", "Darwin"]

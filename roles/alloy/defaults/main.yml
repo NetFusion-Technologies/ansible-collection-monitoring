@@ -67,15 +67,15 @@ alloy_paths:
     group: Administrators
 
 # Resolve the platform key explicitly.
-# - Linux distros key off ansible_os_family
-# - macOS keys off ansible_system == Darwin
+# - Linux distros key off ansible_facts["os_family"]
+# - macOS keys off ansible_facts["system"] == Darwin
 # - anything else becomes UNSUPPORTED and should fail in tasks/main.yml
 alloy_platform_key: >-
   {{
-    ansible_os_family
-    if ansible_os_family in ['Debian', 'Archlinux', 'Windows']
+    ansible_facts["os_family"]
+    if ansible_facts["os_family"] in ['Debian', 'Archlinux', 'Windows']
     else 'Darwin'
-    if ansible_system == 'Darwin'
+    if ansible_facts["system"] == 'Darwin'
     else 'UNSUPPORTED'
   }}
 

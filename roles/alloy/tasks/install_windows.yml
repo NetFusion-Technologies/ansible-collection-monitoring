@@ -1,4 +1,33 @@
 ---
+- name: Set default NSSM paths
+  ansible.builtin.set_fact:
+    alloy_windows_nssm_zip_url: "{{ alloy_windows_nssm_zip_url | default('https://nssm.cc/ci/nssm-2.24-101-g897c7ad.zip') }}"
+    alloy_windows_nssm_zip_path: "{{ alloy_windows_nssm_zip_path | default('C:\\ProgramData\\Alloy\\nssm.zip') }}"
+    alloy_windows_nssm_dir: "{{ alloy_windows_nssm_dir | default('C:\\ProgramData\\Alloy\\nssm') }}"
+    alloy_windows_nssm_exe: "{{ alloy_windows_nssm_exe | default('C:\\ProgramData\\Alloy\\nssm\\nssm-2.24-101-g897c7ad\\win64\\nssm.exe') }}"
+
+- name: Download NSSM
+  ansible.windows.win_get_url:
+    url: "{{ alloy_windows_nssm_zip_url }}"
+    dest: "{{ alloy_windows_nssm_zip_path }}"
+    force: false
+
+- name: Extract NSSM
+  community.windows.win_unzip:
+    src: "{{ alloy_windows_nssm_zip_path }}"
+    dest: "{{ alloy_windows_nssm_dir }}"
+    delete_archive: false
+
+- name: Verify NSSM exists
+  ansible.windows.win_stat:
+    path: "{{ alloy_windows_nssm_exe }}"
+  register: alloy_windows_nssm_stat
+
+- name: Fail if NSSM was not extracted
+  ansible.builtin.fail:
+    msg: "NSSM was not found at {{ alloy_windows_nssm_exe }}"
+  when: not alloy_windows_nssm_stat.stat.exists
+
 - name: Ensure Alloy config directory exists on Windows
   ansible.windows.win_file:
     path: "{{ alloy_config_dir }}"
@@ -9,73 +38,59 @@
     path: "{{ alloy_storage_path }}"
     state: directory
 
-- name: Set default Windows Alloy download URL
-  ansible.builtin.set_fact:
-    alloy_windows_download_url: "{{ alloy_windows_download_url | default('https://github.com/grafana/alloy/releases/latest/download/alloy-installer-windows-amd64.exe') }}"
+- name: Ensure Alloy binary directory exists on Windows
+  ansible.windows.win_file:
+    path: "{{ alloy_windows_bin_dir | default('C:\\ProgramData\\Alloy\\bin') }}"
+    state: directory
 
-- name: Set default Windows Alloy installer path
+- name: Set default Windows Alloy zip download URL
   ansible.builtin.set_fact:
-    alloy_windows_installer_path: "{{ alloy_windows_installer_path | default('C:\\ProgramData\\Alloy\\alloy-installer.exe') }}"
+    alloy_windows_download_url: "{{ alloy_windows_download_url | default('https://github.com/grafana/alloy/releases/latest/download/alloy-windows-amd64.exe.zip') }}"
+
+- name: Set default Windows Alloy zip path
+  ansible.builtin.set_fact:
+    alloy_windows_zip_path: "{{ alloy_windows_zip_path | default('C:\\ProgramData\\Alloy\\alloy-windows-amd64.exe.zip') }}"
 
 - name: Set default Windows Alloy executable path
   ansible.builtin.set_fact:
-    alloy_windows_default_exe: "{{ alloy_windows_default_exe | default('C:\\Program Files\\GrafanaLabs\\Alloy\\alloy-windows-amd64.exe') }}"
+    alloy_windows_default_exe: "{{ alloy_windows_default_exe | default('C:\\ProgramData\\Alloy\\bin\\alloy-windows-amd64.exe') }}"
 
 - name: Check whether Alloy executable already exists
   ansible.windows.win_stat:
     path: "{{ alloy_windows_default_exe }}"
   register: alloy_windows_exe_stat
 
-- name: Download Alloy installer on Windows
+- name: Download Alloy Windows binary zip
   ansible.windows.win_get_url:
     url: "{{ alloy_windows_download_url }}"
-    dest: "{{ alloy_windows_installer_path }}"
+    dest: "{{ alloy_windows_zip_path }}"
     force: "{{ alloy_upgrade | bool }}"
   when:
     - alloy_upgrade | bool or not alloy_windows_exe_stat.stat.exists
 
-- name: Install Alloy on Windows (detached)
-  ansible.windows.win_powershell:
-    script: |
-      $installer = "{{ alloy_windows_installer_path }}"
-
-      if (!(Test-Path $installer)) {
-        throw "Installer not found: $installer"
-      }
-
-      Start-Process -FilePath $installer -ArgumentList "/S" -WindowStyle Hidden
-
-      Write-Output "started"
-  async: 10
-  poll: 0
+- name: Extract Alloy Windows binary zip
+  community.windows.win_unzip:
+    src: "{{ alloy_windows_zip_path }}"
+    dest: "{{ alloy_windows_bin_dir | default('C:\\ProgramData\\Alloy\\bin') }}"
+    delete_archive: false
   when:
     - alloy_upgrade | bool or not alloy_windows_exe_stat.stat.exists
 
-- name: Wait for Alloy binary to appear
-  ansible.windows.win_wait_for:
+- name: Check whether extracted Alloy executable exists
+  ansible.windows.win_stat:
     path: "{{ alloy_windows_default_exe }}"
-    timeout: 120
+  register: alloy_windows_extracted_exe_stat
 
-- name: Find Alloy executable on Windows
-  ansible.windows.win_powershell:
-    script: |
-      $paths = @(
-        "C:\Program Files\GrafanaLabs\Alloy\alloy-windows-amd64.exe",
-        "C:\Program Files\GrafanaLabs\Alloy\alloy.exe",
-        "C:\Program Files\Alloy\alloy.exe",
-        "C:\ProgramData\Alloy\alloy.exe"
-      )
-      foreach ($p in $paths) {
-        if (Test-Path $p) {
-          Write-Output $p
-          exit 0
-        }
-      }
-      throw "alloy executable not found in expected locations"
-  register: alloy_windows_exe_path
+- name: Fail if Alloy executable was not extracted
+  ansible.builtin.fail:
+    msg: "Alloy executable was not found at {{ alloy_windows_default_exe }} after extracting {{ alloy_windows_zip_path }}"
+  when: not alloy_windows_extracted_exe_stat.stat.exists
+
+- name: Verify Alloy executable runs on Windows
+  ansible.windows.win_command: '"{{ alloy_windows_default_exe }}" --version'
+  register: alloy_windows_version_check
   changed_when: false
 
 - name: Set Windows Alloy executable fact
   ansible.builtin.set_fact:
-    alloy_windows_exe: "{{ alloy_windows_exe_path.output[0] }}"
-
+    alloy_windows_exe: "{{ alloy_windows_default_exe }}"

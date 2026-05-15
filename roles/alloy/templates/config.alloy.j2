@@ -9,7 +9,7 @@ loki.write "default" {
   }
 }
 
-{% if alloy_scrape_journal and ansible_system != "Windows" %}
+{% if alloy_scrape_journal and ansible_facts["system"] != "Windows" %}
 loki.source.journal "systemd" {
   max_age = "{{ alloy_journal_max_age }}"
 

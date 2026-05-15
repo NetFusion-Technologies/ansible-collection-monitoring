@@ -1,7 +1,7 @@
 ---
 - name: Stop on unsupported hosts
   ansible.builtin.meta: end_host
-  when: ansible_os_family not in ["Debian", "Archlinux"]
+  when: ansible_facts["os_family"] not in ["Debian", "Archlinux"]
 
 - name: Install node exporter on Debian
   ansible.builtin.apt:
@@ -9,7 +9,7 @@
       - "{{ node_exporter_package_name_debian }}"
     state: present
     update_cache: true
-  when: ansible_os_family == "Debian"
+  when: ansible_facts["os_family"] == "Debian"
 
 - name: Install node exporter on Arch
   community.general.pacman:
@@ -17,18 +17,18 @@
       - "{{ node_exporter_package_name_arch }}"
     state: present
     update_cache: true
-  when: ansible_os_family == "Archlinux"
+  when: ansible_facts["os_family"] == "Archlinux"
 
 - name: Ensure node exporter service enabled and started on Debian
   ansible.builtin.service:
     name: "{{ node_exporter_service_name_debian }}"
     state: started
     enabled: true
-  when: ansible_os_family == "Debian"
+  when: ansible_facts["os_family"] == "Debian"
 
 - name: Ensure node exporter service enabled and started on Arch
   ansible.builtin.service:
     name: "{{ node_exporter_service_name_arch }}"
     state: started
     enabled: true
-  when: ansible_os_family == "Archlinux"
+  when: ansible_facts["os_family"] == "Archlinux"

@@ -1,7 +1,7 @@
 ---
 - name: Stop on non-Debian hosts
   ansible.builtin.meta: end_host
-  when: ansible_os_family != "Debian"
+  when: ansible_facts["os_family"] != "Debian"
 
 - name: Install Alertmanager package
   ansible.builtin.apt:

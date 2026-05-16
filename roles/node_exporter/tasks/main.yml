@@ -1,7 +1,22 @@
 ---
 - name: Stop on unsupported hosts
   ansible.builtin.meta: end_host
-  when: ansible_facts["os_family"] not in ["Debian", "Archlinux"]
+  when: ansible_facts["os_family"] not in ["Debian", "Archlinux", "RedHat"]
+
+- name: Set Debian node exporter defaults
+  ansible.builtin.set_fact:
+    node_exporter_service_name: "{{ node_exporter_service_name_debian }}"
+  when: ansible_facts["os_family"] == "Debian"
+
+- name: Set Arch node exporter defaults
+  ansible.builtin.set_fact:
+    node_exporter_service_name: "{{ node_exporter_service_name_arch }}"
+  when: ansible_facts["os_family"] == "Archlinux"
+
+- name: Set RedHat node exporter defaults
+  ansible.builtin.set_fact:
+    node_exporter_service_name: "{{ node_exporter_service_name_redhat }}"
+  when: ansible_facts["os_family"] == "RedHat"
 
 - name: Install node exporter on Debian
   ansible.builtin.apt:
@@ -19,16 +34,66 @@
     update_cache: true
   when: ansible_facts["os_family"] == "Archlinux"
 
-- name: Ensure node exporter service enabled and started on Debian
-  ansible.builtin.service:
-    name: "{{ node_exporter_service_name_debian }}"
-    state: started
-    enabled: true
-  when: ansible_facts["os_family"] == "Debian"
+- name: Ensure node_exporter user exists on RedHat
+  ansible.builtin.user:
+    name: "{{ node_exporter_user_redhat }}"
+    shell: /sbin/nologin
+    system: true
+    create_home: false
+  when: ansible_facts["os_family"] == "RedHat"
 
-- name: Ensure node exporter service enabled and started on Arch
+- name: Download node_exporter on RedHat
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version_redhat }}/node_exporter-{{ node_exporter_version_redhat }}.linux-{{ node_exporter_arch_redhat }}.tar.gz"
+    dest: "/tmp/node_exporter-{{ node_exporter_version_redhat }}.linux-{{ node_exporter_arch_redhat }}.tar.gz"
+    mode: "0644"
+  when: ansible_facts["os_family"] == "RedHat"
+
+- name: Extract node_exporter on RedHat
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter-{{ node_exporter_version_redhat }}.linux-{{ node_exporter_arch_redhat }}.tar.gz"
+    dest: /tmp
+    remote_src: true
+  when: ansible_facts["os_family"] == "RedHat"
+
+- name: Install node_exporter binary on RedHat
+  ansible.builtin.copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version_redhat }}.linux-{{ node_exporter_arch_redhat }}/node_exporter"
+    dest: "{{ node_exporter_bin_redhat }}"
+    owner: root
+    group: root
+    mode: "0755"
+    remote_src: true
+  when: ansible_facts["os_family"] == "RedHat"
+  notify: restart node_exporter
+
+- name: Install node_exporter systemd unit on RedHat
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Prometheus Node Exporter
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      User={{ node_exporter_user_redhat }}
+      Group={{ node_exporter_user_redhat }}
+      Type=simple
+      ExecStart={{ node_exporter_bin_redhat }}
+
+      [Install]
+      WantedBy=multi-user.target
+  when: ansible_facts["os_family"] == "RedHat"
+  notify:
+    - daemon reload
+    - restart node_exporter
+
+- name: Ensure node exporter service enabled and started
   ansible.builtin.service:
-    name: "{{ node_exporter_service_name_arch }}"
+    name: "{{ node_exporter_service_name }}"
     state: started
     enabled: true
-  when: ansible_facts["os_family"] == "Archlinux"

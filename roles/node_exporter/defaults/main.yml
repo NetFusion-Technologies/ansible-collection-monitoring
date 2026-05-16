@@ -3,3 +3,10 @@ node_exporter_service_name_debian: prometheus-node-exporter
 
 node_exporter_package_name_arch: prometheus-node-exporter
 node_exporter_service_name_arch: prometheus-node-exporter
+
+node_exporter_version_redhat: "1.9.1"
+node_exporter_arch_redhat: "amd64"
+node_exporter_user_redhat: node_exporter
+node_exporter_bin_redhat: /usr/local/bin/node_exporter
+node_exporter_service_name_redhat: node_exporter
+

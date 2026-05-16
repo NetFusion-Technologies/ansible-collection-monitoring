@@ -1,12 +1,9 @@
 ---
-- name: restart node exporter on Debian
-  ansible.builtin.service:
-    name: "{{ node_exporter_service_name_debian }}"
-    state: restarted
-  when: ansible_facts["os_family"] == "Debian"
+- name: daemon reload
+  ansible.builtin.systemd:
+    daemon_reload: true
 
-- name: restart node exporter on Arch
+- name: restart node_exporter
   ansible.builtin.service:
-    name: "{{ node_exporter_service_name_arch }}"
+    name: "{{ node_exporter_service_name }}"
     state: restarted
-  when: ansible_facts["os_family"] == "Archlinux"

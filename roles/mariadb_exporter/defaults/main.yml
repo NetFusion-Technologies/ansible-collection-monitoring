@@ -1,0 +1,13 @@
+---
+mariadb_exporter_version: "0.16.0"
+mariadb_exporter_arch: amd64
+mariadb_exporter_user: mysqld_exporter
+mariadb_exporter_bin: /usr/local/bin/mysqld_exporter
+mariadb_exporter_service_name: mysqld_exporter
+mariadb_exporter_port: 9104
+mariadb_exporter_config_file: /etc/mysqld_exporter.cnf
+
+mariadb_exporter_db_user: mysqld_exporter
+mariadb_exporter_db_password: "{{ vault_mariadb_exporter_password }}"
+mariadb_exporter_db_host: 127.0.0.1
+mariadb_exporter_db_port: 3306

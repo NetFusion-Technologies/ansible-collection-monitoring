@@ -1,0 +1,76 @@
+---
+- name: Stop on unsupported hosts
+  ansible.builtin.meta: end_host
+  when: ansible_facts["os_family"] not in ["Debian", "RedHat"]
+
+- name: Ensure mysqld_exporter user exists
+  ansible.builtin.user:
+    name: "{{ mariadb_exporter_user }}"
+    shell: /usr/sbin/nologin
+    system: true
+    create_home: false
+
+- name: Download mysqld_exporter
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/mysqld_exporter/releases/download/v{{ mariadb_exporter_version }}/mysqld_exporter-{{ mariadb_exporter_version }}.linux-{{ mariadb_exporter_arch }}.tar.gz"
+    dest: "/tmp/mysqld_exporter.tar.gz"
+    mode: "0644"
+
+- name: Extract mysqld_exporter
+  ansible.builtin.unarchive:
+    src: /tmp/mysqld_exporter.tar.gz
+    dest: /tmp
+    remote_src: true
+
+- name: Install mysqld_exporter binary
+  ansible.builtin.copy:
+    src: "/tmp/mysqld_exporter-{{ mariadb_exporter_version }}.linux-{{ mariadb_exporter_arch }}/mysqld_exporter"
+    dest: "{{ mariadb_exporter_bin }}"
+    owner: root
+    group: root
+    mode: "0755"
+    remote_src: true
+  notify: restart mariadb_exporter
+
+- name: Write mysqld_exporter config
+  ansible.builtin.copy:
+    dest: "{{ mariadb_exporter_config_file }}"
+    owner: root
+    group: "{{ mariadb_exporter_user }}"
+    mode: "0640"
+    content: |
+      [client]
+      user={{ mariadb_exporter_db_user }}
+      password={{ mariadb_exporter_db_password }}
+      host={{ mariadb_exporter_db_host }}
+      port={{ mariadb_exporter_db_port }}
+  notify: restart mariadb_exporter
+
+- name: Install mysqld_exporter systemd unit
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/{{ mariadb_exporter_service_name }}.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Prometheus MariaDB/MySQL Exporter
+      After=network.target
+
+      [Service]
+      User={{ mariadb_exporter_user }}
+      Group={{ mariadb_exporter_user }}
+      ExecStart={{ mariadb_exporter_bin }} \
+        --config.my-cnf={{ mariadb_exporter_config_file }} \
+        --web.listen-address=:{{ mariadb_exporter_port }}
+
+      [Install]
+      WantedBy=multi-user.target
+  notify:
+    - daemon reload
+    - restart mariadb_exporter
+
+- name: Ensure mysqld_exporter enabled and started
+  ansible.builtin.systemd:
+    name: "{{ mariadb_exporter_service_name }}"
+    state: started
+    enabled: true
+    daemon_reload: true

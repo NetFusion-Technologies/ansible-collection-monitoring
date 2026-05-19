@@ -23,6 +23,9 @@ scrape_configs:
         labels:
           instance_name: '{{ monitoring_prometheus_host }}'
           job_group: monitoring
+          service_tier: critical
+          environment: '{{ monitoring_environment }}'
+          scrape_scope: infrastructure
     relabel_configs:
       - source_labels: [__address__]
         target_label: scrape_target
@@ -36,6 +39,9 @@ scrape_configs:
         labels:
           instance_name: '{{ monitoring_alertmanager_host }}'
           job_group: monitoring
+          service_tier: critical
+          environment: '{{ monitoring_environment }}'
+          scrape_scope: infrastructure
     relabel_configs:
       - source_labels: [__address__]
         target_label: scrape_target
@@ -51,6 +57,9 @@ scrape_configs:
         labels:
           instance_name: '{{ h }}'
           job_group: linux
+          service_tier: '{{ hostvars[h].monitoring_service_tier | default("standard") }}'
+          environment: '{{ monitoring_environment }}'
+          scrape_scope: node
 {% endfor %}
     relabel_configs:
       - source_labels: [__address__]
@@ -70,6 +79,9 @@ scrape_configs:
           instance_name: '{{ h }}'
           proxmox_node: '{{ h }}'
           job_group: proxmox
+          service_tier: critical
+          environment: '{{ monitoring_environment }}'
+          scrape_scope: node
 {% endfor %}
     relabel_configs:
       - source_labels: [__address__]
@@ -89,6 +101,8 @@ scrape_configs:
           instance_name: 'nft-pve4'
           proxmox_node: 'nft-pve4'
           job_group: proxmox
+          service_tier: critical
+          environment: '{{ monitoring_environment }}'
           scrape_scope: cluster
     relabel_configs:
       - source_labels: [__address__]
